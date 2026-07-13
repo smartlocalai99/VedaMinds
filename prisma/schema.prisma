@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  userCode            String               @unique
+  firstName           String
+  lastName            String
+  email               String               @unique
+  mobile              String?              @unique
+  password            String
+  roleId              String
+  status              UserStatus           @default(ACTIVE)
+  emailVerified       Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @default(now()) @updatedAt
+  accountLockedUntil  DateTime?
+  isDeleted           Boolean              @default(false)
+  lastLoginAt         DateTime?
+  loginAttempts       Int                  @default(0)
+  mustChangePassword  Boolean              @default(true)
+  createdAgents       Agent[]              @relation("AgentCreatedBy")
+  agent               Agent?
+  notifications       NotificationLog[]
+  passwordResetTokens PasswordResetToken[]
+  role                Role                 @relation(fields: [roleId], references: [id])
+  vendor              Vendor?
+}
+
+model Role {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now()) @updatedAt
+  rolePermissions RolePermission[]
+  users           User[]
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @default(now()) @updatedAt
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @default(now()) @updatedAt
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  role         Role       @relation(fields: [roleId], references: [id])
+
+  @@unique([roleId, permissionId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NotificationLog {
+  id           String             @id @default(cuid())
+  userId       String?
+  type         NotificationType
+  subject      String?
+  recipient    String
+  message      String
+  status       NotificationStatus @default(PENDING)
+  provider     String?
+  errorMessage String?
+  sentAt       DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @default(now()) @updatedAt
+  user         User?              @relation(fields: [userId], references: [id])
+}
+
+model Agent {
+  id              String       @id @default(cuid())
+  agentCode       String       @unique
+  userId          String       @unique
+  alternateMobile String?
+  address         String?
+  city            String?
+  state           String?
+  pincode         String?
+  joiningDate     DateTime     @default(now())
+  status          UserStatus   @default(ACTIVE)
+  createdBy       String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @default(now()) @updatedAt
+  isDeleted       Boolean      @default(false)
+  createdByUser   User?        @relation("AgentCreatedBy", fields: [createdBy], references: [id])
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vendors         Vendor[]
+  memberships     Membership[]
+}
+
+model Vendor {
+  id           String     @id @default(cuid())
+  vendorCode   String     @unique
+  userId       String     @unique
+  agentId      String
+  shopName     String
+  ownerName    String
+  businessType String?
+  gstNumber    String?
+  address      String?
+  city         String?
+  state        String?
+  pincode      String?
+  latitude     Float?
+  longitude    Float?
+  joiningDate  DateTime   @default(now())
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  isDeleted    Boolean    @default(false)
+  agent        Agent      @relation(fields: [agentId], references: [id])
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  scanLogs     MembershipScanLog[]
+  transactions PurchaseTransaction[]
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum NotificationType {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+  BLOCKED
+}
+
+enum ScanResult {
+  SUCCESS
+  EXPIRED
+  BLOCKED
+  INVALID
+}
+
+enum PaymentMode {
+  CASH
+  UPI
+  CARD
+}
+
+model Membership {
+  id               String @id @default(cuid())
+  membershipNumber String @unique
+
+  agentId      String
+  customerName String
+  mobile       String  @unique
+  email        String?
+  gender       Gender?
+
+  photoUrl String?
+
+  barcodeValue String  @unique
+  qrCodeUrl    String?
+
+  startDate  DateTime
+  expiryDate DateTime
+
+  discountPercentage Float @default(10)
+
+  status MembershipStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agent Agent @relation(fields: [agentId], references: [id])
+
+  scanLogs     MembershipScanLog[]
+  transactions PurchaseTransaction[]
+}
+
+model MembershipScanLog {
+  id String @id @default(cuid())
+
+  membershipId String
+  vendorId     String
+
+  scanDateTime DateTime @default(now())
+
+  scanResult ScanResult
+
+  remarks String?
+
+  membership Membership @relation(fields: [membershipId], references: [id])
+  vendor     Vendor     @relation(fields: [vendorId], references: [id])
+}
+
+model PurchaseTransaction {
+  id String @id @default(cuid())
+
+  membershipId String
+  vendorId     String
+
+  billAmount Decimal @db.Decimal(10, 2)
+
+  discountPercentage Float
+
+  discountAmount Decimal @db.Decimal(10, 2)
+
+  finalAmount Decimal @db.Decimal(10, 2)
+
+  paymentMode PaymentMode
+
+  transactionDate DateTime @default(now())
+
+  membership Membership @relation(fields: [membershipId], references: [id])
+  vendor     Vendor     @relation(fields: [vendorId], references: [id])
+}
