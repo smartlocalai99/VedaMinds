@@ -86,20 +86,32 @@ export default function VendorDashboard() {
 
       {/* Header */}
 
-      <div className="bg-green-800 text-white p-5 flex justify-between items-center">
+      <div className="bg-gradient-to-r from-green-900 via-green-700 to-green-600 text-white px-10 py-5 shadow-lg">
 
-        <h1 className="text-3xl font-bold">
-          VEDA Vendor Portal
-        </h1>
+  <div className="flex justify-between items-center">
 
-        <button
-          onClick={logout}
-          className="bg-red-600 px-5 py-2 rounded-lg"
-        >
-          Logout
-        </button>
+    <div>
 
-      </div>
+      <h1 className="text-3xl font-bold">
+        VEDA Vendor Portal
+      </h1>
+
+      <p className="text-green-100 mt-1">
+        Smart Vendor Membership System
+      </p>
+
+    </div>
+
+    <button
+      onClick={logout}
+      className="bg-red-600 hover:bg-red-700 px-5 py-2 rounded-lg"
+    >
+      Logout
+    </button>
+
+  </div>
+
+</div>
 
       {/* Content */}
 
@@ -114,7 +126,7 @@ export default function VendorDashboard() {
           Vendor Dashboard
         </p>
 
-        <div className="grid grid-cols-3 gap-8">
+<div className="grid grid-cols-3 gap-8">
 
   <div className="bg-white rounded-xl shadow p-8">
     <h3 className="text-2xl font-bold mb-4">
